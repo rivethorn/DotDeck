@@ -38,6 +38,17 @@ var unlinkCmd = &cobra.Command{
 				if dryRun {
 					fmt.Printf("Would remove symlink %s\n", destPath)
 				} else {
+					// Check if backup exists
+					if _, err := os.Stat(backupPath); err != nil {
+						// No backup, ask for confirmation
+						fmt.Printf("No backup found for %s. Delete symlink? [y/N]: ", destPath)
+						var response string
+						fmt.Scanln(&response)
+						if response != "y" && response != "Y" {
+							fmt.Printf("Skipping %s\n", destPath)
+							continue
+						}
+					}
 					os.Remove(destPath)
 					internal.LogVerbose(verbose, "Removed %s symlink", destPath)
 				}
@@ -49,11 +60,10 @@ var unlinkCmd = &cobra.Command{
 							fmt.Printf("❌ restoring backup for %s failed: %v\n", destPath, err)
 							continue
 						}
-						fmt.Printf("♻️  restored backup for %s\n", destPath)
+						fmt.Printf("♻️ restored backup for %s\n", destPath)
 					} else {
-						fmt.Printf("🗑  removed symlink %s (no backup found)\n", destPath)
+						fmt.Printf("🗑 removed symlink %s (no backup found)\n", destPath)
 					}
-
 				}
 			} else {
 				fmt.Printf("⚠️  %s is not a symlink, skipping\n", destPath)
