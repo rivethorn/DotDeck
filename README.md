@@ -1,5 +1,7 @@
 # DotDeck
 
+[![Go](https://github.com/rivethorn/DotDeck/actions/workflows/go.yml/badge.svg)](https://github.com/rivethorn/DotDeck/actions/workflows/go.yml)
+
 <p align="center">
     <img src="assets/deck.png" alt="DotDeck Logo" width="250"/>
 </p>
