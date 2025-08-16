@@ -3,6 +3,7 @@ APP_NAME := deck
 PKG      := .
 BIN_DIR  := bin
 GO_FILES := $(shell find . -type f -name '*.go' -not -path "./vendor/*")
+GO_PATH  := $(shell go env GOPATH)
 
 # Go build settings
 GO       := go
@@ -25,9 +26,12 @@ build: $(GO_FILES)
 	@echo "✅ Built $(BIN_DIR)/$(APP_NAME)"
 
 ## Install binary globally
-install: build
+install:
+	@echo "🚀 Building $(APP_NAME)..."
+	@$(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS) -X 'main.version=$(VERSION)' -X 'main.commit=$(COMMIT)' -X 'main.buildTime=$(BUILDTIME)'" -o $(APP_NAME) $(PKG)
 	@echo "📦 Installing to $$GOPATH/bin (or Go bin dir)..."
-	@$(GO) install $(GOFLAGS) -ldflags "$(LDFLAGS) -X 'main.version=$(VERSION)' -X 'main.commit=$(COMMIT)' -X 'main.buildTime=$(BUILDTIME)'" $(PKG)
+	@mv $(APP_NAME) $(GO_PATH)/bin/
+	@echo "✅ Installed $(APP_NAME) to $$GOPATH/bin (or Go bin dir)"
 
 ## Run tests
 test:
@@ -55,8 +59,8 @@ build-windows:
 
 ## Show help
 help:
-    @echo "Available make targets:"
-    @grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
-        sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
+	@echo "Available make targets:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: all build install test lint clean build-linux help
