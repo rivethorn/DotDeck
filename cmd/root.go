@@ -24,6 +24,7 @@ func init() {
 	)
 }
 
+// Execute the Cobra rootCmd
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

@@ -12,6 +12,7 @@ import (
 
 	"github.com/rivethorn/dotdeck/internal"
 	"github.com/rivethorn/dotdeck/internal/config"
+	"github.com/rivethorn/dotdeck/internal/runner"
 	"github.com/spf13/cobra"
 )
 
@@ -52,10 +53,6 @@ func copyFile(src, dst string) error {
 	return err
 }
 
-func checkSSHAgent() error {
-	return exec.Command("ssh-add", "-l").Run()
-}
-
 func runCmd(name string, args ...string) error {
 	internal.LogVerbose(verbose, "Running: %s %s", name, strings.Join(args, " "))
 	cmd := exec.Command(name, args...)
@@ -89,17 +86,11 @@ func stageAndCommit(files []string) error {
 
 func pullBeforePush() error {
 	fmt.Println("🔄  Pulling latest changes from remote...")
-	remote, _ := runCmdOutput("git", "remote", "get-url", "origin")
-	if strings.HasPrefix(remote, "git@") {
-		if err := checkSSHAgent(); err != nil {
-			fmt.Println("⚠ SSH agent may not be loaded — run `ssh-add` before continuing.")
-		}
-	}
-	return runCmd("git", "pull", "--ff-only")
+	return runner.RunInteractive("git", "pull", "--ff-only")
 }
 
 func pushIfAhead() error {
-	if err := runCmd("git", "fetch"); err != nil {
+	if err := runner.RunInteractive("git", "fetch"); err != nil {
 		return err
 	}
 	status, err := runCmdOutput("git", "status", "-sb")
@@ -111,7 +102,7 @@ func pushIfAhead() error {
 		return nil
 	}
 	fmt.Println("⇪ Pushing changes to remote...")
-	return runCmd("git", "push")
+	return runner.RunInteractive("git", "push")
 }
 
 // Commands
