@@ -52,9 +52,10 @@ var unlinkCmd = &cobra.Command{
 							fmt.Printf("Skipping %s\n", destPath)
 							continue
 						}
+						os.Remove(destPath)
+						internal.LogVerbose(verbose, "Removed %s symlink", destPath)
 					}
-					os.Remove(destPath)
-					internal.LogVerbose(verbose, "Removed %s symlink", destPath)
+					return nil
 				}
 				if dryRun {
 					fmt.Printf("Would restore backup %s -> %s\n", backupPath, destPath)
@@ -68,9 +69,11 @@ var unlinkCmd = &cobra.Command{
 					} else {
 						fmt.Printf("󰩹 Removed symlink %s (no backup found)\n", destPath)
 					}
+					return nil
 				}
 			} else {
 				fmt.Printf(" %s is not a symlink, skipping\n", destPath)
+				return nil
 			}
 		}
 		return nil
