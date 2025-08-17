@@ -18,11 +18,15 @@ var unlinkCmd = &cobra.Command{
 	Use:   "unlink",
 	Short: "Remove symlinks and restore backups",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		internal.LogVerbose(verbose, "Starting unlink command")
+		internal.LogVerbose(verbose, "Checking for config file")
 		cfg, err := config.Load("config.toml")
 		if err != nil {
 			return err
 		}
+		internal.LogVerbose(verbose, "Config file loaded successfully")
 
+		internal.LogVerbose(verbose, "Evaluating files")
 		for _, dest := range cfg.Files {
 			destPath := expandPath(dest)
 			backupPath := destPath + ".deckbak"
@@ -30,7 +34,7 @@ var unlinkCmd = &cobra.Command{
 			internal.LogVerbose(verbose, "Evaluating %s", destPath)
 			info, err := os.Lstat(destPath)
 			if err != nil {
-				fmt.Printf("⚠️  %s missing, skipping...\n", destPath)
+				fmt.Printf(" %s missing, skipping...\n", destPath)
 				continue
 			}
 
@@ -41,7 +45,7 @@ var unlinkCmd = &cobra.Command{
 					// Check if backup exists
 					if _, err := os.Stat(backupPath); err != nil {
 						// No backup, ask for confirmation
-						fmt.Printf("No backup found for %s. Delete symlink? [y/N]: ", destPath)
+						fmt.Printf("No backup found for %s. You'll lose your config. Delete symlink? [y/N]: ", destPath)
 						var response string
 						fmt.Scanln(&response)
 						if response != "y" && response != "Y" {
@@ -57,16 +61,16 @@ var unlinkCmd = &cobra.Command{
 				} else {
 					if _, err := os.Stat(backupPath); err == nil {
 						if err := os.Rename(backupPath, destPath); err != nil {
-							fmt.Printf("❌ restoring backup for %s failed: %v\n", destPath, err)
+							fmt.Printf("❌ Restoring backup for %s failed: %v\n", destPath, err)
 							continue
 						}
-						fmt.Printf("♻️ restored backup for %s\n", destPath)
+						fmt.Printf("󰑌 Restored backup for %s\n", destPath)
 					} else {
-						fmt.Printf("🗑 removed symlink %s (no backup found)\n", destPath)
+						fmt.Printf("󰩹 Removed symlink %s (no backup found)\n", destPath)
 					}
 				}
 			} else {
-				fmt.Printf("⚠️  %s is not a symlink, skipping\n", destPath)
+				fmt.Printf(" %s is not a symlink, skipping\n", destPath)
 			}
 		}
 		return nil
