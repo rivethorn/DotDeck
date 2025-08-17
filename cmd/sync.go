@@ -1,12 +1,9 @@
 package cmd
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -16,41 +13,36 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	pulling bool
+	pushing bool
+	force   bool
+)
+
 // Helper functions
 
-func isGitDirty(path string) (bool, error) {
-	out, err := exec.Command("git", "status", "--porcelain", path).Output()
+func isGitInstalled() (bool, error) {
+	_, err := exec.Command("git", "--version").Output()
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func isGitRepo() (bool, error) {
+	_, err := exec.Command("git", "rev-parse", "--is-inside-work-tree").Output()
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func isGitDirty() (bool, error) {
+	out, err := exec.Command("git", "diff-files").Output()
 	if err != nil {
 		return false, err
 	}
 	return len(out) > 0, nil
-}
-
-func filesDiffer(a, b string) (bool, error) {
-	f1, err := os.ReadFile(a)
-	if err != nil {
-		return false, err
-	}
-	f2, err := os.ReadFile(b)
-	if err != nil {
-		return false, err
-	}
-	return !bytes.Equal(f1, f2), nil
-}
-
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	_, err = io.Copy(out, in)
-	return err
 }
 
 func runCmd(name string, args ...string) error {
@@ -60,12 +52,6 @@ func runCmd(name string, args ...string) error {
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 	return cmd.Run()
-}
-
-func runCmdOutput(name string, args ...string) (string, error) {
-	internal.LogVerbose(verbose, "Running (capture): %s %s", name, strings.Join(args, " "))
-	out, err := exec.Command(name, args...).Output()
-	return strings.TrimSpace(string(out)), err
 }
 
 func hostname() string {
@@ -85,91 +71,102 @@ func stageAndCommit(files []string) error {
 }
 
 func pullBeforePush() error {
-	fmt.Println("🔄  Pulling latest changes from remote...")
+	fmt.Println("󰓂 Pulling latest changes from remote...")
 	return runner.RunInteractive("git", "pull", "--ff-only")
-}
-
-func pushIfAhead() error {
-	if err := runner.RunInteractive("git", "fetch"); err != nil {
-		return err
-	}
-	status, err := runCmdOutput("git", "status", "-sb")
-	if err != nil {
-		return err
-	}
-	if !strings.Contains(status, "ahead") {
-		fmt.Println("✓ Nothing to push — branch is up to date.")
-		return nil
-	}
-	fmt.Println("⇪ Pushing changes to remote...")
-	return runner.RunInteractive("git", "push")
 }
 
 // Commands
 
-var force bool
-
 var syncCmd = &cobra.Command{
 	Use:   "sync",
-	Short: "Sync dotfiles form system to repo, commit, merge, and push",
+	Short: "Sync dotfiles form system to repo, commit, pull, and push",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Load("config.toml")
+		internal.LogVerbose(verbose, "Starting sync command")
+		internal.LogVerbose(verbose, "Checking for config file")
+		_, err := config.Load("config.toml")
+		if err != nil {
+			fmt.Println("You're not in a valid DotDeck repository")
+			return err
+		}
+		internal.LogVerbose(verbose, "Config loaded successfully")
+
+		internal.LogVerbose(verbose, "Checking if Git is installed")
+		gitInstalled, err := isGitInstalled()
 		if err != nil {
 			return err
 		}
-
-		changedFiles := []string{}
-
-		for src, dest := range cfg.Files {
-			absSrc, _ := filepath.Abs(src)
-			destPath := expandPath(dest)
-
-			if _, err := os.Stat(destPath); os.IsNotExist(err) {
-				continue
-			}
-
-			dirty, err := isGitDirty(absSrc)
-			if err != nil {
-				return err
-			}
-
-			changed, err := filesDiffer(destPath, absSrc)
-			if err != nil {
-				return err
-			}
-
-			if changed && (dirty || force) {
-				fmt.Printf("↩ syncing %s → %s\n", destPath, absSrc)
-				if !dryRun {
-					if err := copyFile(destPath, absSrc); err != nil {
-						return err
-					}
-					changedFiles = append(changedFiles, absSrc)
-				}
-			} else {
-				internal.LogVerbose(verbose, "Skipping %s - no changes or clean", src)
-			}
+		if !gitInstalled {
+			return fmt.Errorf("Git is not installed, please install Git and try again")
 		}
 
-		if len(changedFiles) > 0 && !dryRun {
-			if err := stageAndCommit(changedFiles); err != nil {
-				return err
+		internal.LogVerbose(verbose, "Checking if inside a Git repository")
+		gitRepo, err := isGitRepo()
+		if err != nil {
+			return err
+		}
+		if !gitRepo {
+			return fmt.Errorf("Not inside a Git repository")
+		}
+
+		internal.LogVerbose(verbose, "Checking for changes to sync")
+		dirty, err := isGitDirty()
+		if err != nil {
+			return err
+		}
+		if dirty {
+			internal.LogVerbose(verbose, "Local changes detected")
+		}
+
+		if pulling {
+			if dirty {
+				fmt.Print("You already have local changes, are you sure you want to continue? (y/N) ")
+				var response string
+				fmt.Scanln(&response)
+				if response != "y" {
+					return fmt.Errorf("Aborted")
+				}
+				fmt.Println(" Force pulling changes...")
+				runner.RunInteractive("git", "reset", "--hard", "origin")
+				return nil
 			}
 			if err := pullBeforePush(); err != nil {
 				return err
 			}
-			if err := pushIfAhead(); err != nil {
+			return nil
+		}
+
+		if pushing {
+			if !dirty {
+				if force {
+					fmt.Println(" Force pushing changes...")
+					runner.RunInteractive("git", "push", "--force")
+					return nil
+				}
+				fmt.Println(" Nothing to push — branch is up to date.")
+				return nil
+
+			}
+			if err := stageAndCommit([]string{"."}); err != nil {
 				return err
 			}
-		} else if len(changedFiles) == 0 {
-			fmt.Println("✓ No changes to sync")
+			fmt.Println("⇪ Pushing changes to remote...")
+			return runner.RunInteractive("git", "push")
 		}
+
+		fmt.Println("Usage: dotdeck sync [options]")
+		fmt.Println("Options:")
+		fmt.Println("  -d, --pull       Pull from the remote repo")
+		fmt.Println("  -u, --push       Push to the remote repo")
+		fmt.Println("  -f, --force      Force sync even if Git shows clean status")
+		fmt.Println("      --dry-run    Simulate actions without making changes")
 
 		return nil
 	},
 }
 
 func init() {
+	syncCmd.Flags().BoolVarP(&pulling, "pull", "d", false, "Pull from the remote repo")
+	syncCmd.Flags().BoolVarP(&pushing, "push", "u", false, "Push to the remote repo")
 	syncCmd.Flags().BoolVarP(&force, "force", "f", false, "Force sync even if Git shows clean status")
 	syncCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Simulate actions without making changes")
 	rootCmd.AddCommand(syncCmd)
