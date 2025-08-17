@@ -19,6 +19,7 @@ DotDeck is a **dotfile manager**: it keeps your personal configuration files (sh
 ### Prerequisites
 - Go 1.18 or later
 - Make (for build automation)
+- I also recommend using a [NerdFont](https://www.nerdfonts.com/font-downloads) for better experience.
 
 ### Installation
 
