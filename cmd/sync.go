@@ -122,7 +122,7 @@ var syncCmd = &cobra.Command{
 				fmt.Print("You already have local changes, are you sure you want to continue? (y/N) ")
 				var response string
 				fmt.Scanln(&response)
-				if response != "y" {
+				if response != "y" && response != "Y" {
 					return fmt.Errorf("Aborted")
 				}
 				fmt.Println(" Force pulling changes...")
