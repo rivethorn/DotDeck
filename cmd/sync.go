@@ -21,6 +21,7 @@ var (
 
 // Helper functions
 
+// isGotInstalled checks to see if Git inls installed on the system
 func isGitInstalled() (bool, error) {
 	_, err := exec.Command("git", "--version").Output()
 	if err != nil {
@@ -29,6 +30,7 @@ func isGitInstalled() (bool, error) {
 	return true, nil
 }
 
+// isGitRepo checks to see if the active directory has Git initialized
 func isGitRepo() (bool, error) {
 	_, err := exec.Command("git", "rev-parse", "--is-inside-work-tree").Output()
 	if err != nil {
@@ -37,6 +39,7 @@ func isGitRepo() (bool, error) {
 	return true, nil
 }
 
+// isGitDirty checks the Git repo for diffs
 func isGitDirty() (bool, error) {
 	out, err := exec.Command("git", "diff-files").Output()
 	if err != nil {
@@ -45,6 +48,7 @@ func isGitDirty() (bool, error) {
 	return len(out) > 0, nil
 }
 
+// runCmd runs the given command and its arguments
 func runCmd(name string, args ...string) error {
 	internal.LogVerbose(verbose, "Running: %s %s", name, strings.Join(args, " "))
 	cmd := exec.Command(name, args...)
@@ -54,11 +58,13 @@ func runCmd(name string, args ...string) error {
 	return cmd.Run()
 }
 
+// hostname returns the OS hostname, discarding the potential error
 func hostname() string {
 	h, _ := os.Hostname()
 	return h
 }
 
+// stageAndCommit stages all modified files in the repo and commits them with the function's internal formatting
 func stageAndCommit(files []string) error {
 	args := append([]string{"add"}, files...)
 	internal.LogVerbose(verbose, "Staging files: %v", files)
@@ -70,6 +76,7 @@ func stageAndCommit(files []string) error {
 	return runCmd("git", "commit", "-m", msg)
 }
 
+// pullBeforePush pulls from remote repo using --ff-only flag
 func pullBeforePush() error {
 	fmt.Println("󰓂 Pulling latest changes from remote...")
 	return runner.RunInteractive("git", "pull", "--ff-only")
