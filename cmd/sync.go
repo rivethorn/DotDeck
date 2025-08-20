@@ -21,7 +21,7 @@ var (
 
 // Helper functions
 
-// isGotInstalled checks to see if Git inls installed on the system
+// isGotInstalled checks to see if Git is installed on the system
 func isGitInstalled() (bool, error) {
 	_, err := exec.Command("git", "--version").Output()
 	if err != nil {
@@ -103,7 +103,7 @@ var syncCmd = &cobra.Command{
 			return err
 		}
 		if !gitInstalled {
-			return fmt.Errorf("Git is not installed, please install Git and try again")
+			return fmt.Errorf("git is not installed, please install git and try again")
 		}
 
 		internal.LogVerbose(verbose, "Checking if inside a Git repository")
@@ -112,7 +112,7 @@ var syncCmd = &cobra.Command{
 			return err
 		}
 		if !gitRepo {
-			return fmt.Errorf("Not inside a Git repository")
+			return fmt.Errorf("not inside a git repository")
 		}
 
 		internal.LogVerbose(verbose, "Checking for changes to sync")
@@ -128,12 +128,18 @@ var syncCmd = &cobra.Command{
 			if dirty {
 				fmt.Print("You already have local changes, are you sure you want to continue? (y/N) ")
 				var response string
-				fmt.Scanln(&response)
+				_, err := fmt.Scanln(&response)
+				if err != nil {
+					return err
+				}
 				if response != "y" && response != "Y" {
-					return fmt.Errorf("Aborted")
+					return fmt.Errorf("aborted")
 				}
 				fmt.Println(" Force pulling changes...")
-				runner.RunInteractive("git", "reset", "--hard", "origin")
+				err = runner.RunInteractive("git", "reset", "--hard", "origin")
+				if err != nil {
+					return err
+				}
 				return nil
 			}
 			if err := pullBeforePush(); err != nil {
@@ -146,7 +152,10 @@ var syncCmd = &cobra.Command{
 			if !dirty {
 				if force {
 					fmt.Println(" Force pushing changes...")
-					runner.RunInteractive("git", "push", "--force")
+					err := runner.RunInteractive("git", "push", "--force")
+					if err != nil {
+						return err
+					}
 					return nil
 				}
 				fmt.Println(" Nothing to push — branch is up to date.")
