@@ -47,12 +47,18 @@ var unlinkCmd = &cobra.Command{
 						// No backup, ask for confirmation
 						fmt.Printf("No backup found for %s. You'll lose your config. Delete symlink? [y/N]: ", destPath)
 						var response string
-						fmt.Scanln(&response)
+						_, err := fmt.Scanln(&response)
+						if err != nil {
+							return err
+						}
 						if response != "y" && response != "Y" {
 							fmt.Printf("Skipping %s\n", destPath)
 							continue
 						}
-						os.Remove(destPath)
+						err = os.Remove(destPath)
+						if err != nil {
+							return err
+						}
 						internal.LogVerbose(verbose, "Removed %s symlink", destPath)
 					}
 					return nil

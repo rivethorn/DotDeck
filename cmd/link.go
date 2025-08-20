@@ -40,7 +40,7 @@ var linkCmd = &cobra.Command{
 				}
 				if info.Mode()&os.ModeSymlink != 0 {
 					internal.LogVerbose(verbose, "%s is already symlinked", destPath)
-					return fmt.Errorf("Symlink %s already exists", destPath)
+					return fmt.Errorf("symlink %s already exists", destPath)
 				}
 				backupPath := destPath + ".deckbak"
 				if dryRun {
@@ -49,9 +49,15 @@ var linkCmd = &cobra.Command{
 					// Check if backup already exists
 					if _, err := os.Stat(backupPath); err == nil {
 						internal.LogVerbose(verbose, "Backing up %s -> %s", destPath, backupPath)
-						os.Rename(destPath, backupPath)
+						err := os.Rename(destPath, backupPath)
+						if err != nil {
+							return err
+						}
 						internal.LogVerbose(verbose, "Backed up %s -> %s", destPath, backupPath)
-						os.Remove(destPath)
+						err = os.Remove(destPath)
+						if err != nil {
+							return err
+						}
 						internal.LogVerbose(verbose, "Removed %s", destPath)
 					}
 					fmt.Printf("󰑌 Backed up %s to %s\n", destPath, backupPath)

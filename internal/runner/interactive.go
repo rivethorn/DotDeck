@@ -5,7 +5,7 @@ import (
 	"os/exec"
 )
 
-// RunInteractive runs a command with stdio attached so SSH can propmt for passphrase
+// RunInteractive runs a command with stdio attached so SSH can prompt for passphrase
 func RunInteractive(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	cmd.Env = append(os.Environ(),
