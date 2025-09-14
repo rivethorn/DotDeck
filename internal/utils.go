@@ -1,3 +1,4 @@
+// Package internal holds some helper functions.
 package internal
 
 import "fmt"

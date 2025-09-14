@@ -1,3 +1,5 @@
+// Package cmd contains the functionalities that are needed for the app
+// to run.
 package cmd
 
 import (
@@ -6,8 +8,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var dryRun bool
-var verbose bool
+var (
+	dryRun  bool
+	verbose bool
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "deck",

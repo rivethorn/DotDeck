@@ -1,3 +1,4 @@
+// Package runner contains a function to run a command interactively.
 package runner
 
 import (
